@@ -10,9 +10,9 @@ jobs:
       - name: Setup FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
 
-      - name: Create Work Directory
+      - name: Prepare Workspace
         run: |
-          mkdir -p workspace/v0 workspace/v1 workspace/v2 workspace/v3
+          mkdir -p workspace/hls/v0 workspace/hls/v1 workspace/hls/v2 workspace/hls/v3
 
       - name: Download Raw Video
         run: |
@@ -21,32 +21,32 @@ jobs:
       - name: Transcode to Multi-Res HLS
         working-directory: ./workspace
         run: |
+          # We use -preset superfast to reduce RAM and CPU spikes on the GitHub runner
           ffmpeg -i input.mp4 \
             -filter_complex "[0:v]split=4[v1][v2][v3][v4]; \
             [v1]scale=1920:1080[v1out]; \
             [v2]scale=1280:720[v2out]; \
             [v3]scale=854:480[v3out]; \
             [v4]scale=640:360[v4out]" \
-            -map "[v1out]" -c:v:0 libx264 -preset veryfast -b:v:0 5000k \
-            -map "[v2out]" -c:v:1 libx264 -preset veryfast -b:v:1 2800k \
-            -map "[v3out]" -c:v:2 libx264 -preset veryfast -b:v:2 1400k \
-            -map "[v4out]" -c:v:3 libx264 -preset veryfast -b:v:3 800k \
+            -map "[v1out]" -c:v:0 libx264 -preset superfast -b:v:0 5000k \
+            -map "[v2out]" -c:v:1 libx264 -preset superfast -b:v:1 2800k \
+            -map "[v3out]" -c:v:2 libx264 -preset superfast -b:v:2 1400k \
+            -map "[v4out]" -c:v:3 libx264 -preset superfast -b:v:3 800k \
             -map a:0 -c:a aac -b:a 128k -ac 2 \
             -f hls \
             -hls_time 6 \
             -hls_playlist_type vod \
-            -hls_segment_filename "v%v/file%03d.ts" \
+            -hls_segment_filename "hls/v%v/segment%03d.ts" \
             -master_pl_name master.m3u8 \
             -var_stream_map "v:0,a:0 v:1,a:0 v:2,a:0 v:3,a:0" \
-            v%v/index.m3u8
+            hls/v%v/index.m3u8
 
       - name: Sync to Cloudflare R2
-        working-directory: ./workspace
+        working-directory: ./workspace/hls
         run: |
           aws s3 sync . s3://youtube/processed/${{ github.event.client_payload.videoId }}/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
-            --region auto \
-            --exclude "input.mp4"
+            --region auto
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

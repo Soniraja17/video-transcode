@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import axios from "axios";
 async function starttranscoding(video_url:string,videoid:string){
     const GITHUB_API_URL = `https://api.github.com/repos/${process.env.GITHUB_USERNAME}/${process.env.GITHUB_REPO_NAME}/dispatches`;
+    console.log(GITHUB_API_URL);
     await axios.post(GITHUB_API_URL,
     {
         event_type:'process_video',

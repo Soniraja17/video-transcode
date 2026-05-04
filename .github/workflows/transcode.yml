@@ -21,24 +21,25 @@ jobs:
       - name: Transcode to Multi-Res HLS
         working-directory: ./workspace
         run: |
-          # We use -preset superfast to reduce RAM and CPU spikes on the GitHub runner
+          # We split the video into 4 and the audio into 4 to avoid the 'Same elementary stream' error
           ffmpeg -i input.mp4 \
-            -filter_complex "[0:v]split=4[v1][v2][v3][v4]; \
-            [v1]scale=1920:1080[v1out]; \
-            [v2]scale=1280:720[v2out]; \
-            [v3]scale=854:480[v3out]; \
-            [v4]scale=640:360[v4out]" \
-            -map "[v1out]" -c:v:0 libx264 -preset superfast -b:v:0 5000k \
-            -map "[v2out]" -c:v:1 libx264 -preset superfast -b:v:1 2800k \
-            -map "[v3out]" -c:v:2 libx264 -preset superfast -b:v:2 1400k \
-            -map "[v4out]" -c:v:3 libx264 -preset superfast -b:v:3 800k \
-            -map a:0 -c:a aac -b:a 128k -ac 2 \
+            -filter_complex \
+            "[0:v]split=4[v1][v2][v3][v4]; \
+             [v1]scale=1920:1080[v1out]; \
+             [v2]scale=1280:720[v2out]; \
+             [v3]scale=854:480[v3out]; \
+             [v4]scale=640:360[v4out]; \
+             [0:a]asplit=4[a1][a2][a3][a4]" \
+            -map "[v1out]" -map "[a1]" -c:v:0 libx264 -preset superfast -b:v:0 5000k -c:a:0 aac -b:a:0 128k \
+            -map "[v2out]" -map "[a2]" -c:v:1 libx264 -preset superfast -b:v:1 2800k -c:a:1 aac -b:a:1 128k \
+            -map "[v3out]" -map "[a3]" -c:v:2 libx264 -preset superfast -b:v:2 1400k -c:a:2 aac -b:a:2 128k \
+            -map "[v4out]" -map "[a4]" -c:v:3 libx264 -preset superfast -b:v:3 800k -c:a:3 aac -b:a:3 128k \
             -f hls \
             -hls_time 6 \
             -hls_playlist_type vod \
             -hls_segment_filename "hls/v%v/segment%03d.ts" \
             -master_pl_name master.m3u8 \
-            -var_stream_map "v:0,a:0 v:1,a:0 v:2,a:0 v:3,a:0" \
+            -var_stream_map "v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3" \
             hls/v%v/index.m3u8
 
       - name: Sync to Cloudflare R2

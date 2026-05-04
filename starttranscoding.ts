@@ -5,7 +5,7 @@ async function starttranscoding(video_url:string,videoid:string){
     console.log(GITHUB_API_URL);
     await axios.post(GITHUB_API_URL,
     {
-        event_type:'process_video',
+        event_type:'process-video',
         client_payload:{
             inputUrl:video_url,
             videoId:videoid,

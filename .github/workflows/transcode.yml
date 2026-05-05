@@ -55,6 +55,6 @@ jobs:
         run: |
           # We construct the URL and run the update query directly against Postgres
           # Replace 'YOUR_PUBLIC_R2_URL' with your actual R2 public domain
-          PUBLIC_URL="https://pub-your-id.r2.dev/processed/${{ github.event.client_payload.videoId }}/master.m3u8"
+          PUBLIC_URL="https://pub-69011fd091b04e43be7212bbe23d52e3.r2.dev/processed/${{ github.event.client_payload.videoId }}/master.m3u8"
           
           psql "${{ secrets.DATABASE_URL }}" -c "UPDATE uploads SET status = 'READY', hls_url = '$PUBLIC_URL' WHERE id = '${{ github.event.client_payload.videoId }}';"

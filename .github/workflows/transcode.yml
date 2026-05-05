@@ -21,7 +21,6 @@ jobs:
       - name: Transcode to Multi-Res HLS
         working-directory: ./workspace
         run: |
-          # We split the video into 4 and the audio into 4 to avoid the 'Same elementary stream' error
           ffmpeg -i input.mp4 \
             -filter_complex \
             "[0:v]split=4[v1][v2][v3][v4]; \
@@ -46,15 +45,16 @@ jobs:
         working-directory: ./workspace/hls
         run: |
           aws s3 sync . s3://youtube/processed/${{ github.event.client_payload.videoId }}/ \
-            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflAREstorage.com \
             --region auto
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 
-      - name: Notify Backend
+      - name: Update Database Directly
         run: |
-          curl -X POST "${{ secrets.BACKEND_API_URL }}/api/webhooks/video-ready" \
-            -H "Content-Type: application/json" \
-            -H "x-webhook-secret: ${{ secrets.WEBHOOK_SECRET }}" \
-            -d "{\"videoId\": \"${{ github.event.client_payload.videoId }}\", \"status\": \"READY\"}"
+          # We construct the URL and run the update query directly against Postgres
+          # Replace 'YOUR_PUBLIC_R2_URL' with your actual R2 public domain
+          PUBLIC_URL="https://pub-your-id.r2.dev/processed/${{ github.event.client_payload.videoId }}/master.m3u8"
+          
+          psql "${{ secrets.DATABASE_URL }}" -c "UPDATE uploads SET status = 'READY', hls_url = '$PUBLIC_URL' WHERE id = '${{ github.event.client_payload.videoId }}';"
